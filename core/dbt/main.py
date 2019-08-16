@@ -374,7 +374,7 @@ def _build_snapshot_subparser(subparsers, base_subparser, which='snapshot'):
 
 
 def _build_run_subparser(subparsers, base_subparser):
-    run_sub = subparsers.add_parser(
+    run_sub = subparsers.add_parser(                  # adds run subcommand which defaults to using the RunTask script
         'run',
         parents=[base_subparser],
         help="Compile SQL and execute against the current "
@@ -382,6 +382,14 @@ def _build_run_subparser(subparsers, base_subparser):
     run_sub.set_defaults(cls=run_task.RunTask, which='run')
     return run_sub
 
+def _build_dev_subparser(subparsers, base_subparser): # feature/dev-models-with-prod-data
+    dev_sub = subparsers.add_parser(                  # adds dev subcommand which uses a modified --models argument
+        'dev',
+        parents=[base_subparser],
+        help="Compile only SQL modified on the current Github branch "
+        "and execute against the current target database.")
+    dev_sub.set_defaults(cls=run_task.RunTask, which='dev')
+    return dev_sub
 
 def _build_compile_subparser(subparsers, base_subparser):
     sub = subparsers.add_parser(
@@ -409,9 +417,9 @@ def _build_docs_generate_subparser(subparsers, base_subparser):
     return generate_sub
 
 
-def _add_selection_arguments(*subparsers, **kwargs):
-    models_name = kwargs.get('models_name', 'models')
-    for sub in subparsers:
+def _add_selection_arguments(*subparsers, **kwargs): 
+    models_name = kwargs.get('models_name', 'models') # get the model name, else return string 'models'
+    for sub in subparsers: # for all subparsers passed to it, add '-m', '--models' and '--exclude' as arguments
         sub.add_argument(
             '-{}'.format(models_name[0]),
             '--{}'.format(models_name),
@@ -430,7 +438,6 @@ def _add_selection_arguments(*subparsers, **kwargs):
             Specify the models to exclude.
             """
         )
-
 
 def _add_table_mutability_arguments(*subparsers):
     for sub in subparsers:
@@ -612,6 +619,16 @@ def _build_list_subparser(subparsers, base_subparser):
               "'model'. Mutually exclusive with '--select' (or '-s') and "
               "'--resource-type'",
     )
+    sub.add_argument( # remove later
+        '-d',
+        '--dev',
+        required=False,
+        nargs='+',
+        metavar='SELECTOR',
+        help="Same functionality as '-m'/'--models' but will only run models changed on current Git branch, "
+              "with other models in DAG being changed to referring to production data instead of "
+              "rerunning the entire model. Mutually exclusive with '-s'/'--select', '-m'/'--models' and '--resource-type'.",
+    )
     sub.add_argument(
         '--exclude',
         required=False,
@@ -777,6 +794,7 @@ def parse_args(args):
     archive_sub = _build_snapshot_subparser(subs, base_subparser, 'archive')
     rpc_sub = _build_rpc_subparser(subs, base_subparser)
     run_sub = _build_run_subparser(subs, base_subparser)
+    dev_sub = _build_dev_subparser(subs, base_subparser)
     compile_sub = _build_compile_subparser(subs, base_subparser)
     generate_sub = _build_docs_generate_subparser(docs_subs, base_subparser)
     test_sub = _build_test_subparser(subs, base_subparser)
@@ -784,7 +802,7 @@ def parse_args(args):
     _add_common_arguments(run_sub, compile_sub, generate_sub, test_sub,
                           rpc_sub)
     # --models, --exclude
-    _add_selection_arguments(run_sub, compile_sub, generate_sub, test_sub,
+    _add_selection_arguments(run_sub, dev_sub, compile_sub, generate_sub, test_sub,
                              archive_sub)
     _add_selection_arguments(snapshot_sub, models_name='select')
     # --full-refresh

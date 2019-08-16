@@ -34,7 +34,7 @@ class ListTask(GraphRunnableTask):
     def __init__(self, args, config):
         super(ListTask, self).__init__(args, config)
         self.args.single_threaded = True
-        if self.args.models:
+        if self.args.models: # feature/dev-models-with-prod-data
             if self.args.select:
                 raise dbt.exceptions.RuntimeException(
                     '"models" and "select" are mutually exclusive arguments'
